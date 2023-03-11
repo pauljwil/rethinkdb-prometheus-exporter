@@ -4,34 +4,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const (
-	readOperation    = "read"
-	writtenOperation = "written"
-)
-
-// Describe sends metrics descriptions to the prometheus chan
+// Describe sends metrics descriptions to the Prometheus channel.
 func (e *RethinkdbExporter) Describe(ch chan<- *prometheus.Desc) {
-	ch <- e.metrics.clusterClientConnections
-	ch <- e.metrics.clusterDocsPerSecond
-
-	ch <- e.metrics.serverClientConnections
-	ch <- e.metrics.serverQueriesPerSecond
-	ch <- e.metrics.serverDocsPerSecond
-
-	ch <- e.metrics.tableDocsPerSecond
-	if e.metrics.tableRowsCount != nil {
-		ch <- e.metrics.tableRowsCount
-	}
-
-	ch <- e.metrics.tableReplicaDocsPerSecond
-	ch <- e.metrics.tableReplicaCacheBytes
-	ch <- e.metrics.tableReplicaIO
-	ch <- e.metrics.tableReplicaDataBytes
-
-	ch <- e.metrics.scrapeLatency
-	ch <- e.metrics.scrapeErrors
+	prometheus.DescribeByCollect(e, ch)
 }
 
+// initMetrics initializes metrics descriptions.
 func (e *RethinkdbExporter) initMetrics() {
 	e.metrics.clusterClientConnections = prometheus.NewDesc(
 		"cluster_client_connections",
@@ -85,6 +63,7 @@ func (e *RethinkdbExporter) initMetrics() {
 		"Table replica size in stored bytes",
 		[]string{"db", "table", "server"}, nil)
 
+	// Prometheus scrape metrics
 	e.metrics.scrapeLatency = prometheus.NewDesc(
 		"scrape_latency",
 		"Latency of collecting scrape",
@@ -93,4 +72,48 @@ func (e *RethinkdbExporter) initMetrics() {
 		"scrape_errors",
 		"Number of errors while collecting scrape",
 		nil, nil)
+
+	// current_issues table metrics
+	e.metrics.logWriteIssues = prometheus.NewDesc(
+		"log_write_issues",
+		"Number of log write issues",
+		nil, nil,
+	)
+	e.metrics.nameCollisionIssues = prometheus.NewDesc(
+		"name_collision_issues",
+		"Number of name collision issues",
+		nil, nil,
+	)
+	e.metrics.outdatedIndexIssues = prometheus.NewDesc(
+		"outdated_index_issues",
+		"Number of outdated index issues",
+		nil, nil,
+	)
+	e.metrics.totalAvailabilityIssues = prometheus.NewDesc(
+		"total_availability_issues",
+		"Number of total availability issues",
+		nil, nil,
+	)
+	e.metrics.memoryAvailabilityIssues = prometheus.NewDesc(
+		"memory_availability_issues",
+		"Number of memory availability issues",
+		nil, nil,
+	)
+	e.metrics.connectivityIssues = prometheus.NewDesc(
+		"connectivity_issues",
+		"Number of connectivity issues",
+		nil, nil,
+	)
+	e.metrics.otherIssues = prometheus.NewDesc(
+		"other_issues",
+		"Number of unspecified issues",
+		nil, nil,
+	)
+
+	// Table sizes
+	e.metrics.tableSize = prometheus.NewDesc(
+		"table_size",
+		"RethinkDB table size in MB",
+		[]string{"db", "table"}, nil,
+	)
 }

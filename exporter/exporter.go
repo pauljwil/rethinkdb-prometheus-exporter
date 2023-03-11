@@ -38,6 +38,16 @@ type RethinkdbExporter struct {
 
 		scrapeLatency *prometheus.Desc
 		scrapeErrors  *prometheus.Desc
+
+		logWriteIssues           *prometheus.Desc
+		nameCollisionIssues      *prometheus.Desc
+		outdatedIndexIssues      *prometheus.Desc
+		totalAvailabilityIssues  *prometheus.Desc
+		memoryAvailabilityIssues *prometheus.Desc
+		connectivityIssues       *prometheus.Desc
+		otherIssues              *prometheus.Desc
+
+		tableSize *prometheus.Desc
 	}
 }
 
