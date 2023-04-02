@@ -13,9 +13,6 @@ import (
 )
 
 var (
-	cTables []issue
-	sTables []stat
-
 	sTable1 stat = stat{
 		ID: []string{"cluster"},
 		QueryEngine: queryEngine{
@@ -86,14 +83,42 @@ var (
 	}
 )
 
-func TestNewStatsTableMetrics(t *testing.T) {
-	sTables = append(sTables, sTable1, sTable2, sTable3, sTable4)
-	cTables = append(cTables, cTable1, cTable2, cTable3, cTable4, cTable5, cTable6)
+func TestNewRethinkDBMetrics(t *testing.T) {
+	sTables := []stat{sTable1, sTable2, sTable3, sTable4}
+	cTables := []issue{cTable1, cTable2, cTable3, cTable4, cTable5, cTable6}
 
 	mock := gorethink.NewMock()
 
-	mock.On(gorethink.MockAnything()).Return(sTables, nil)
-	mock.On(gorethink.MockAnything()).Return(cTables, nil)
+	mock.On(gorethink.DB(gorethink.SystemDatabase).Table(gorethink.StatsSystemTable)).Return(sTables, nil)
+
+	mock.On(gorethink.DB("dtr2").Table("repository_team_access").Info()).Return(
+		info{
+			DocCountEstimates: []float64{10, 20, 30},
+		}, nil)
+
+	mock.On(gorethink.DB(gorethink.SystemDatabase).Table(gorethink.CurrentIssuesSystemTable)).Return(cTables, nil)
+
+	mock.On(gorethink.DB(gorethink.SystemDatabase).Table(gorethink.StatsSystemTable).HasFields("db", "table").Group("db", "table").Map(func(doc gorethink.Term) gorethink.Term {
+		return doc.Field("storage_engine").Field("disk").Field("space_usage").Field("data_bytes").Default(0)
+	}).Sum().Ungroup().Map(func(doc gorethink.Term) interface{} {
+		return map[string]interface{}{
+			"size":  doc.Field("reduction").Div(1024).Div(1024),
+			"db":    doc.Field("group").Nth(0),
+			"table": doc.Field("group").Nth(1),
+		}
+	})).Return(
+		[]tableSize{
+			{
+				DB:    "dtr2",
+				Table: "cluster",
+				Size:  42,
+			},
+			{
+				DB:    "dtr2",
+				Table: "server",
+				Size:  13,
+			},
+		}, nil)
 
 	collector := &RethinkdbExporter{
 		rconn:             mock,
